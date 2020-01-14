@@ -1,6 +1,11 @@
 # gameconf-server
-An HTTP service that processes and responds to game config requests from SourceMod
+An HTTP service that processes and responds to game config requests from [SourceMod][]
 installations.
+
+I've had this idea on the backburner for years.
+Not sure what to do now that I've actually done it.
+
+[SourceMod]: https://www.sourcemod.net/
 
 ## Configuration
 
@@ -13,6 +18,11 @@ modify as desired.
 
 Run the `gameconf_server.py` script to start the server.  You may want to daemonize it in some
 way; that's left for you to do.
+
+On your SourceMod installation, modify `configs/core.cfg` and point `AutoUpdateURL` to your
+server.
+
+**Important:**  Only use update servers you trust!
 
 ### Directory layout
 The service searches the working directory for first-party game configs in "major.minor" format
