@@ -97,6 +97,9 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	def write_vdf_response(self, data):
 		self.wfile.write(vdf.dumps(data, pretty = True).encode('ascii'))
 	
+	def send_attribution(self):
+		self.send_header('X-GCUP-Src', config.get('attribution', 'source'))
+	
 	# SourceMod sends data as a POST to the URL defined as "AutoUpdateURL" in core.cfg
 	def do_POST(self):
 		# SourceMod even requests gameconf files via POST (?!); route request to do_GET
@@ -106,6 +109,7 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		data = self.parse_form_data()
 		
 		self.send_response(200)
+		self.send_attribution()
 		self.end_headers()
 		
 		if not data:
@@ -136,6 +140,7 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		if os.path.commonprefix([request_path, current_directory]) != current_directory:
 			self.send_response(403)
 			self.send_header('Content-type', 'text/plain')
+			self.send_attribution()
 			self.end_headers()
 			return
 		
@@ -143,12 +148,14 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		if not os.path.exists(request_path) or not os.path.isfile(request_path) or request_ext != '.txt':
 			self.send_response(404)
 			self.send_header('Content-type', 'text/plain')
+			self.send_attribution()
 			self.end_headers()
 			return
 		
 		# TODO sanitize and only access gameconf directories
 		self.send_response(200)
 		self.send_header('Content-type', 'text/plain')
+		self.send_attribution()
 		self.end_headers()
 		
 		with open(request_path, 'rb') as gameconf:
@@ -167,6 +174,9 @@ def main():
 		raise Exception("Missing server configuration file.")
 	
 	config.read(args.config)
+	
+	if not config.get('attribution', 'source', fallback = None):
+		raise Exception("Missing attribution / source section in configuration file.")
 	
 	new_root = config.get('server', 'workdir', fallback = None)
 	if new_root:

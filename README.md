@@ -18,10 +18,10 @@ Not sure what to do now that I've actually done it.
 modify as desired.
 3. Use `poetry run server` to start the server.  You may want to daemonize it in some way;
 that's left for you to do.
+    - You may also pass in `--config ${PATH}` to specify an alternate path for the config.
 4. On your SourceMod installation, modify `configs/core.cfg` and point `AutoUpdateURL` to your
 server.
-
-**Important:**  Only use update servers you trust!
+    - **Important:**  Only use update servers you trust!
 
 ### Directory layout
 The service searches the working directory for first-party game configs in "major.minor" format
@@ -42,3 +42,7 @@ a closed network (such as for a group of servers), only those consumers are requ
 access to the source.  It is your responsibility to ensure it's not internet-facing.
 - Any additional software that runs alongside the server (e.g., a separate service that updates
 the game config files) is not bound by the AGPLv3.
+
+The server attaches an `X-GCUP-Src` response header to every server request; the simplest way to
+point users to your modified builds would be to modify the `source` entry in the `attribution`
+section of the configuration file.
