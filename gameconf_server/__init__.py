@@ -162,14 +162,18 @@ def main():
 	
 	args = parser.parse_args()
 	
-	if os.path.exists(args.config) and os.path.isfile(args.config):
-		config.read(args.config)
+	if not os.path.exists(args.config) or not os.path.isfile(args.config):
+		# The configuration file must exist somewhere.
+		raise Exception("Missing server configuration file.")
+	
+	config.read(args.config)
+	
+	new_root = config.get('server', 'workdir', fallback = None)
+	if new_root:
+		if not os.path.isabs(new_root):
+			new_root = os.path.join(os.path.dirname(args.config), new_root)
+		os.chdir(os.path.abspath(new_root))
 		
-		new_root = config.get('server', 'workdir', fallback = None)
-		if new_root:
-			if not os.path.isabs(new_root):
-				new_root = os.path.join(os.path.dirname(args.config), new_root)
-			os.chdir(os.path.abspath(new_root))
 	print(f"Set working directory to {os.getcwd()}")
 	
 	host_addr = config.get('server', 'host', fallback = '')
