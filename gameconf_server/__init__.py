@@ -94,6 +94,9 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 			return dict(urllib.parse.parse_qsl(self.rfile.read(length).decode('ascii')))
 		return {}
 	
+	def write_vdf_response(self, data):
+		self.wfile.write(vdf.dumps(data, pretty = True).encode('ascii'))
+	
 	# SourceMod sends data as a POST to the URL defined as "AutoUpdateURL" in core.cfg
 	def do_POST(self):
 		# SourceMod even requests gameconf files via POST (?!); route request to do_GET
@@ -106,10 +109,8 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		self.end_headers()
 		
 		if not data:
-			errors = {
-				"error": "Failed to parse request."
-			}
-			self.wfile.write(vdf.dumps({ 'Errors': errors }, pretty = True).encode('ascii'))
+			errors = { "error": "Failed to parse request." }
+			self.write_vdf_response({ 'Errors': errors })
 			return
 		
 		sm_version = tuple(map(int, data.get('version').split('.')))
@@ -117,20 +118,20 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		# TODO should we just do directory checks for this?
 		if sm_version < (1, 6) or sm_version >= (1, 12):
 			errors = { "error": "Unsupported SourceMod version. Please upgrade." }
-			self.wfile.write(vdf.dumps({ 'Errors': errors }, pretty = True).encode('ascii'))
+			self.write_vdf_response({ 'Errors': errors })
 			return
 		
 		changes = {}
 		for name, info in get_changed_gameconf(sm_version, { data[f'file_{n}_name']: data[f'file_{n}_md5'] for n in range(int(data['files'])) }):
 			changes[name] = info
 		
-		self.wfile.write(vdf.dumps({ 'Changed': changes }, pretty = True).encode('ascii'))
+		self.write_vdf_response({ 'Changed': changes })
 	
 	# SourceMod requests individual gameconf files
 	def do_GET(self):
-		# TODO send file on /, else lookup gameconf file
 		request_path = os.path.realpath(self.path[1:])
 		
+		# prevent path traversal attacks
 		current_directory = os.getcwd()
 		if os.path.commonprefix([request_path, current_directory]) != current_directory:
 			self.send_response(403)
