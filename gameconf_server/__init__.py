@@ -1,4 +1,4 @@
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 # 
 # HTTP server that serves gameconf requests from SourceMod installations.
@@ -131,7 +131,7 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		# TODO send file on /, else lookup gameconf file
 		request_path = os.path.realpath(self.path[1:])
 		
-		current_directory = os.path.dirname(os.path.realpath(__file__))
+		current_directory = os.getcwd()
 		if os.path.commonprefix([request_path, current_directory]) != current_directory:
 			self.send_response(403)
 			self.send_header('Content-type', 'text/plain')
@@ -154,13 +154,29 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 			shutil.copyfileobj(gameconf, self.wfile)
 
 def main():
-	config.read('config.ini')
+	import argparse
+	parser = argparse.ArgumentParser(description = "Runs a SM game config update server.")
+	parser.add_argument('--config', help = "Configuration file to use.",
+			default = 'config.ini')
+	
+	args = parser.parse_args()
+	
+	if os.path.exists(args.config) and os.path.isfile(args.config):
+		config.read(args.config)
+		
+		new_root = config.get('server', 'workdir', fallback = None)
+		if new_root:
+			if not os.path.isabs(new_root):
+				new_root = os.path.join(os.path.dirname(args.config), new_root)
+			os.chdir(os.path.abspath(new_root))
+	print(f"Set working directory to {os.getcwd()}")
+	
 	host_addr = config.get('server', 'host', fallback = '')
 	host_port = config.getint('server', 'port', fallback = 0x4D53)
 	
 	try:
 		server = http.server.HTTPServer((host_addr, host_port), GameConfUpdateHandler)
-		print('Started server on host "' + host_addr + '", port', host_port)
+		print(f"Started server on host '{host_addr}', port {host_port}")
 		server.serve_forever()
 	except KeyboardInterrupt:
 		server.socket.close()
