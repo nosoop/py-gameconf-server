@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+__version__ = '0.1.0'
 
 # 
 # HTTP server that serves gameconf requests from SourceMod installations.
@@ -153,7 +153,7 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		with open(request_path, 'rb') as gameconf:
 			shutil.copyfileobj(gameconf, self.wfile)
 
-if __name__ == '__main__':
+def main():
 	config.read('config.ini')
 	host_addr = config.get('server', 'host', fallback = '')
 	host_port = config.getint('server', 'port', fallback = 0x4D53)
@@ -164,3 +164,6 @@ if __name__ == '__main__':
 		server.serve_forever()
 	except KeyboardInterrupt:
 		server.socket.close()
+
+if __name__ == '__main__':
+	main()

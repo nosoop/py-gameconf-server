@@ -10,16 +10,15 @@ Not sure what to do now that I've actually done it.
 ## Configuration
 
 ### Dependencies
-- [vdf](https://github.com/ValvePython/vdf)
+- [Poetry](https://github.com/python-poetry/poetry)
 
 ### Initial setup
-Refer to `config.example.ini` for configuration options; copy or rename to `config.ini` and
+1. Clone the repository, then `poetry install`.
+2. Refer to `config.example.ini` for configuration options; copy or rename to `config.ini` and
 modify as desired.
-
-Run the `gameconf_server.py` script to start the server.  You may want to daemonize it in some
-way; that's left for you to do.
-
-On your SourceMod installation, modify `configs/core.cfg` and point `AutoUpdateURL` to your
+3. Use `poetry run server` to start the server.  You may want to daemonize it in some way;
+that's left for you to do.
+4. On your SourceMod installation, modify `configs/core.cfg` and point `AutoUpdateURL` to your
 server.
 
 **Important:**  Only use update servers you trust!
@@ -42,4 +41,4 @@ state the changes you've made.
 a closed network (such as for a group of servers), only those consumers are required to have
 access to the source.  It is your responsibility to ensure it's not internet-facing.
 - Any additional software that runs alongside the server (e.g., a separate service that updates
-the game config files) are not bound by the AGPLv3.
+the game config files) is not bound by the AGPLv3.
