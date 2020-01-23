@@ -163,12 +163,12 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 def main():
 	import argparse
 	parser = argparse.ArgumentParser(description = "Runs a SM game config update server.")
-	parser.add_argument('--config', help = "Configuration file to use.",
+	parser.add_argument('--config', help = "Configuration file to use.", type = pathlib.Path,
 			default = 'config.ini')
 	
 	args = parser.parse_args()
 	
-	if not os.path.exists(args.config) or not os.path.isfile(args.config):
+	if not args.config.exists() or not args.config.is_file():
 		# The configuration file must exist somewhere.
 		raise Exception("Missing server configuration file.")
 	
@@ -180,10 +180,10 @@ def main():
 	new_root = config.get('server', 'workdir', fallback = None)
 	if new_root:
 		if not os.path.isabs(new_root):
-			new_root = os.path.join(os.path.dirname(args.config), new_root)
+			new_root = args.config.parent / new_root
 		os.chdir(os.path.abspath(new_root))
 		
-	print(f"Set working directory to {os.getcwd()}")
+	print(f"Set working directory to '{os.getcwd()}'")
 	
 	host_addr = config.get('server', 'host', fallback = '')
 	host_port = config.getint('server', 'port', fallback = 0x4D53)
