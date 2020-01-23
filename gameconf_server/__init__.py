@@ -100,6 +100,12 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	def send_attribution(self):
 		self.send_header('X-GCUP-Src', config.get('attribution', 'source'))
 	
+	def send_plaintext_headers(self, code):
+		self.send_response(code)
+		self.send_header('Content-Type', 'text/plain')
+		self.send_attribution()
+		self.end_headers()
+	
 	# SourceMod sends data as a POST to the URL defined as "AutoUpdateURL" in core.cfg
 	def do_POST(self):
 		# SourceMod even requests gameconf files via POST (?!); route request to do_GET
@@ -108,9 +114,7 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		
 		data = self.parse_form_data()
 		
-		self.send_response(200)
-		self.send_attribution()
-		self.end_headers()
+		self.send_plaintext_headers(code = 200)
 		
 		if not data:
 			errors = { "error": "Failed to parse request." }
@@ -138,25 +142,16 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		# prevent path traversal attacks
 		current_directory = os.getcwd()
 		if os.path.commonprefix([request_path, current_directory]) != current_directory:
-			self.send_response(403)
-			self.send_header('Content-type', 'text/plain')
-			self.send_attribution()
-			self.end_headers()
+			self.send_plaintext_headers(code = 403)
 			return
 		
 		_, request_ext = os.path.splitext(request_path)
 		if not os.path.exists(request_path) or not os.path.isfile(request_path) or request_ext != '.txt':
-			self.send_response(404)
-			self.send_header('Content-type', 'text/plain')
-			self.send_attribution()
-			self.end_headers()
+			self.send_plaintext_headers(code = 404)
 			return
 		
 		# TODO sanitize and only access gameconf directories
-		self.send_response(200)
-		self.send_header('Content-type', 'text/plain')
-		self.send_attribution()
-		self.end_headers()
+		self.send_plaintext_headers(code = 200)
 		
 		with open(request_path, 'rb') as gameconf:
 			shutil.copyfileobj(gameconf, self.wfile)
