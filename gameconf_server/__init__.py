@@ -12,12 +12,13 @@ import os
 import shutil
 import hashlib
 import cgi
+import cachetools
 
 import configparser
 config = configparser.ConfigParser()
 
+@cachetools.cached(cache = cachetools.TTLCache(maxsize = 1024, ttl = 300))
 def get_md5sum_str(file_path):
-	# TODO cache this
 	try:
 		hasher = hashlib.md5()
 		with open(file_path, 'rb') as f:
@@ -30,6 +31,8 @@ def get_md5sum_str(file_path):
 
 """
 Returns generator of gameconf file paths relative to given directory.
+
+Tuple contains (root, filename_relative_to_gamedata_dir)
 """
 def gameconf_files(root_dir):
 	if not root_dir:
