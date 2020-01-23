@@ -51,7 +51,7 @@ def sm_gameconf_dir(sm_version):
 	return '.'.join(map(str, sm_version[:2]))
 
 """
-Given a dict {file_name=file_md5, ...}, yield tuples (str, {md5sum=, location=}) containing
+Given a dict mapping remote files to remote hashes, yield tuple (path, hash, location) with
 destination filename and md5 / URL path.
 
 Note that the submitted_files include the 'gamedata/' prefix, but the returned struct does not.
@@ -74,7 +74,7 @@ def get_changed_gameconf(sm_version, submitted_files):
 			continue
 		
 		# always return destination path as posix to avoid transmitting backslashes
-		yield (pathlib.PurePosixPath(*remote_path.parts), { 'md5sum': local_hash, 'location': urllib.request.pathname2url(str(local_path)) })
+		yield pathlib.PurePosixPath(*remote_path.parts), local_hash, urllib.request.pathname2url(str(local_path))
 
 class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	"""
@@ -134,8 +134,8 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 			return
 		
 		changes = {}
-		for name, info in get_changed_gameconf(sm_version, { data[f'file_{n}_name']: data[f'file_{n}_md5'] for n in range(int(data['files'])) }):
-			changes[name] = info
+		for name, new_hash, location in get_changed_gameconf(sm_version, { data[f'file_{n}_name']: data[f'file_{n}_md5'] for n in range(int(data['files'])) }):
+			changes[name] = { 'md5sum': new_hash, 'location': location }
 		
 		self.write_vdf_response({ 'Changed': changes })
 	
