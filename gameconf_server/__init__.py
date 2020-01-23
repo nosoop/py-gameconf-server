@@ -19,7 +19,29 @@ import pathlib
 import configparser
 config = configparser.ConfigParser()
 
-@cachetools.cached(cache = cachetools.TTLCache(maxsize = 1024, ttl = 300))
+"""
+Returns a cached value if the file modification time has not changed.
+"""
+class FileModTimeCache(cachetools.LRUCache):
+	def __init__(self, *args, **kwargs):
+		self.mtime_cache = {}
+		super().__init__(*args, **kwargs)
+	
+	def __getitem__(self, key):
+		if self.mtime_cache.get(key) != os.stat(key).st_mtime:
+			self.__missing__(key)
+		return super().__getitem__(key)
+	
+	def __setitem__(self, key, value):
+		super().__setitem__(key, value)
+		self.mtime_cache[key] = os.stat(key).st_mtime
+	
+	def popitem(self):
+		key, value = super().popitem()
+		self.mtime_cache.pop(key)
+		return key, value
+
+@cachetools.cached(cache = FileModTimeCache(maxsize = 1024), key = lambda *a: a[0])
 def get_md5sum_str(file_path):
 	try:
 		hasher = hashlib.md5()
