@@ -6,6 +6,7 @@ __version__ = '0.1.1'
 
 import http.server
 import urllib.parse
+import urllib.request
 import vdf
 import itertools
 import os
@@ -13,6 +14,7 @@ import shutil
 import hashlib
 import cgi
 import cachetools
+import pathlib
 
 import configparser
 config = configparser.ConfigParser()
@@ -30,26 +32,23 @@ def get_md5sum_str(file_path):
 	return ''
 
 """
-Returns generator of gameconf file paths relative to given directory.
-
-Tuple contains (root, filename_relative_to_gamedata_dir)
+An iterator for files within the given root_dir and its subdirectories.
 """
-def gameconf_files(root_dir):
-	if not root_dir:
+def iter_dir_files(root_dir):
+	if not root_dir.exists() or not root_dir.is_dir():
 		return
 	
-	# TODO cache this
-	for subdir, dirs, files in os.walk(root_dir):
-		# dirty hack to return either plain filename or subdirectory within root
-		yield from ((root_dir, os.path.join(os.path.relpath(subdir, root_dir), f) if subdir != root_dir else f) for f in files)
+	for p in root_dir.iterdir():
+		if p.is_dir():
+			yield from p.iterdir()
+		elif p.is_file():
+			yield p
 
 """
 Returns a gameconf dir string based on version (e.g., "1.10")
 """
-def detect_sm_gameconf_dir(sm_version):
-	# TODO move this into an external configuration?
-	sm_dir = '.'.join(map(str, sm_version[:2]))
-	return sm_dir if os.path.exists(sm_dir) else None
+def sm_gameconf_dir(sm_version):
+	return '.'.join(map(str, sm_version[:2]))
 
 """
 Given a dict {file_name=file_md5, ...}, yield tuples (str, {md5sum=, location=}) containing
@@ -61,19 +60,21 @@ def get_changed_gameconf(sm_version, submitted_files):
 	# strip gamedata prefix from POST data
 	remote_files = { os.path.relpath(f, 'gamedata'): s for f, s in submitted_files.items() }
 	
-	gameconf_dirs = [ detect_sm_gameconf_dir(sm_version), 'thirdparty' ]
+	gameconf_dirs = [ sm_gameconf_dir(sm_version), 'thirdparty' ]
 	
-	for r, f in itertools.chain.from_iterable(gameconf_files(f) for f in gameconf_dirs):
-		remote_hash = remote_files.get(f)
+	for local_path in itertools.chain.from_iterable(iter_dir_files(pathlib.Path(f)) for f in gameconf_dirs):
+		# strip leading dir from our FS path to match remote_files
+		remote_path = pathlib.Path(*local_path.parts[1:])
+		remote_hash = remote_files.get(str(remote_path))
 		if not remote_hash:
 			continue
 		
-		local_path = os.path.join(r, f)
 		local_hash = get_md5sum_str(local_path)
 		if remote_hash == local_hash:
 			continue
 		
-		yield (f, { 'md5sum': local_hash, 'location': local_path })
+		# always return destination path as posix to avoid transmitting backslashes
+		yield (pathlib.PurePosixPath(*remote_path.parts), { 'md5sum': local_hash, 'location': urllib.request.pathname2url(str(local_path)) })
 
 class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	"""
