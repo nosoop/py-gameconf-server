@@ -155,12 +155,6 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		
 		sm_version = tuple(map(int, data.get('version').split('.')))
 		
-		# TODO should we just do directory checks for this?
-		if sm_version < (1, 6) or sm_version >= (1, 12):
-			errors = { "error": "Unsupported SourceMod version. Please upgrade." }
-			self.write_vdf_response({ 'Errors': errors })
-			return
-		
 		changes = {}
 		for name, new_hash, location in get_changed_gameconf(sm_version, { data[f'file_{n}_name']: data[f'file_{n}_md5'] for n in range(int(data['files'])) }):
 			changes[name] = { 'md5sum': new_hash, 'location': location }
