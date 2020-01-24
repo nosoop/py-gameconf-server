@@ -76,7 +76,7 @@ def sm_gameconf_dir(sm_version):
 Given a dict mapping remote files to remote hashes, yield tuple (path, hash, location) with
 destination filename and md5 / URL path.
 
-Note that the submitted_files include the 'gamedata/' prefix, but the returned struct does not.
+Note that the submitted_files include the 'gamedata/' prefix, but the returned path does not.
 """
 def get_changed_gameconf(sm_version, submitted_files):
 	# strip gamedata prefix from POST data
@@ -97,6 +97,12 @@ def get_changed_gameconf(sm_version, submitted_files):
 		
 		# always return destination path as posix to avoid transmitting backslashes
 		yield pathlib.PurePosixPath(*remote_path.parts), local_hash, urllib.request.pathname2url(str(local_path))
+
+"""
+Returns True if path `p` is within root.
+"""
+def is_path_under(root, p):
+	return pathlib.Path(*os.path.commonprefix([p.parts, root.parts])) != root
 
 class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	"""
@@ -163,23 +169,21 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	
 	# SourceMod requests individual gameconf files
 	def do_GET(self):
-		request_path = os.path.realpath(self.path[1:])
+		request_path = pathlib.Path(urllib.request.url2pathname(self.path[1:])).resolve()
 		
 		# prevent path traversal attacks
-		current_directory = os.getcwd()
-		if os.path.commonprefix([request_path, current_directory]) != current_directory:
+		if is_path_under(pathlib.Path.cwd(), request_path):
 			self.send_plaintext_headers(code = 403)
 			return
 		
-		_, request_ext = os.path.splitext(request_path)
-		if not os.path.exists(request_path) or not os.path.isfile(request_path) or request_ext != '.txt':
+		if not request_path.is_file() or request_path.suffix != '.txt':
 			self.send_plaintext_headers(code = 404)
 			return
 		
 		# TODO sanitize and only access gameconf directories
 		self.send_plaintext_headers(code = 200)
 		
-		with open(request_path, 'rb') as gameconf:
+		with request_path.open('rb') as gameconf:
 			shutil.copyfileobj(gameconf, self.wfile)
 
 def main():
