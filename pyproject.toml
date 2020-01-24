@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "gameconf-server"
-version = "0.1.0"
-description = ""
-authors = ["Your Name <you@example.com>"]
+version = "0.1.1"
+description = "An HTTP service that responds to SourceMod game config update requests."
+authors = ["nosoop <nosoop@users.noreply.github.com>"]
+license = "AGPL-3.0-or-later"
 
 [tool.poetry.dependencies]
 python = "^3.7"
