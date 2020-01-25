@@ -102,7 +102,7 @@ def get_changed_gameconf(sm_version, submitted_files):
 Returns True if path `p` is within root.
 """
 def is_path_under(root, p):
-	return pathlib.Path(*os.path.commonprefix([p.parts, root.parts])) != root
+	return pathlib.Path(*os.path.commonprefix([p.parts, root.parts])) == root
 
 class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	"""
@@ -166,7 +166,7 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 		request_path = pathlib.Path(urllib.request.url2pathname(self.path[1:])).resolve()
 		
 		# prevent path traversal attacks
-		if is_path_under(pathlib.Path.cwd(), request_path):
+		if not is_path_under(pathlib.Path.cwd(), request_path):
 			self.send_plaintext_headers(code = 403)
 			return
 		
