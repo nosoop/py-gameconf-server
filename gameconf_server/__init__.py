@@ -129,13 +129,9 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	def write_vdf_response(self, data):
 		self.wfile.write(vdf.dumps(data, pretty = True).encode('ascii'))
 	
-	def send_attribution(self):
-		self.send_header('X-GCUP-Src', config.get('attribution', 'source'))
-	
 	def send_plaintext_headers(self, code):
 		self.send_response(code)
 		self.send_header('Content-Type', 'text/plain')
-		self.send_attribution()
 		self.end_headers()
 	
 	# SourceMod sends data as a POST to the URL defined as "AutoUpdateURL" in core.cfg
@@ -193,9 +189,6 @@ def main():
 		raise Exception("Missing server configuration file.")
 	
 	config.read(args.config)
-	
-	if not config.get('attribution', 'source', fallback = None):
-		raise Exception("Missing attribution / source section in configuration file.")
 	
 	new_root = config.get('server', 'workdir', fallback = None)
 	if new_root:

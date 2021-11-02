@@ -31,18 +31,4 @@ The service also checks for matches in the `thirdparty/` directory, for game con
 that aren't tied to a specific SourceMod version.
 
 ## License
-`gameconf-server` is provided under the AGPLv3 license.  Basically, this means that:
-
-- If you publicly host a copy of the server with modified code, you must publish the code and
-state the changes you've made.
-    - This allows everyone to benefit from any improvements other people make to the software.
-    - You'll also need to make sure any libraries you use are inbound compatible.
-- If you run a modified copy that is bound to `localhost` or is otherwise only accessible within
-a closed network (such as for a group of servers), only those consumers are required to have
-access to the source.  It is your responsibility to ensure it's not internet-facing.
-- Any additional software that runs alongside the server (e.g., a separate service that updates
-the game config files) is not bound by the AGPLv3.
-
-The server attaches an `X-GCUP-Src` response header to every server request; the simplest way to
-point users to your modified builds would be to modify the `source` entry in the `attribution`
-section of the configuration file.
+`gameconf-server` is provided under the MIT License.
