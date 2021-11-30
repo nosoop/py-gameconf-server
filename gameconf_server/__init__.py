@@ -54,19 +54,6 @@ def get_md5sum_str(file_path):
 	return ''
 
 """
-An iterator for files within the given root_dir and its subdirectories.
-"""
-def iter_dir_files(root_dir):
-	if not root_dir.exists() or not root_dir.is_dir():
-		return
-	
-	for p in root_dir.iterdir():
-		if p.is_dir():
-			yield from p.iterdir()
-		elif p.is_file():
-			yield p
-
-"""
 Returns a gameconf dir string based on version (e.g., "1.10")
 """
 def sm_gameconf_dir(sm_version):
@@ -84,7 +71,7 @@ def get_changed_gameconf(sm_version, submitted_files):
 	
 	gameconf_dirs = [ sm_gameconf_dir(sm_version), 'thirdparty' ]
 	
-	for local_path in itertools.chain.from_iterable(iter_dir_files(pathlib.Path(f)) for f in gameconf_dirs):
+	for local_path in itertools.chain.from_iterable(pathlib.Path(f).rglob('*.txt') for f in gameconf_dirs):
 		# strip leading dir from our FS path to match remote_files
 		remote_path = pathlib.Path(*local_path.parts[1:])
 		remote_hash = remote_files.get(str(remote_path))
