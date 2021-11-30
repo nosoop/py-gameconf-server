@@ -30,5 +30,8 @@ subdirectories.  Add the configs into directories such as `1.9/`, `1.10/`.
 The service also checks for matches in the `thirdparty/` directory, for game configs
 that aren't tied to a specific SourceMod version.
 
+Any game config files that are present on the server but missing on the client are ignored.
+The official servers differ in this way, as they *do* send missing files.
+
 ## License
 `gameconf-server` is provided under the MIT License.
