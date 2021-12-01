@@ -17,44 +17,7 @@ import configparser
 config = configparser.ConfigParser()
 
 import gameconf_server.server
-
-"""
-Returns a gameconf dir string based on version (e.g., "1.10")
-"""
-def sm_gameconf_dir(sm_version):
-	return '.'.join(map(str, sm_version[:2]))
-
-"""
-Given a dict mapping remote files to remote hashes, yield tuple (path, hash, location) with
-destination filename and md5 / URL path.
-
-Note that the submitted_files include the 'gamedata/' prefix, but the returned path does not.
-"""
-def get_changed_gameconf(sm_version, submitted_files):
-	# strip gamedata prefix from POST data
-	remote_files = { os.path.relpath(f, 'gamedata'): s for f, s in submitted_files.items() }
-	
-	# TODO move this to GameConfigServer with reused directory instances
-	gameconf_dirs = [
-		gameconf_server.server.GameConfigDirectory(p)
-		for p in [ sm_gameconf_dir(sm_version), 'thirdparty' ]
-	]
-	
-	for remote_path, remote_hash in remote_files.items():
-		if not remote_hash:
-			continue
-		
-		local_hash, local_path = (None, None)
-		for gcdir in gameconf_dirs:
-			local_hash, local_path = gcdir.get_file_hash(remote_path), gcdir.path / remote_path
-			if local_hash:
-				break
-		
-		if not local_hash or remote_hash == local_hash:
-			continue
-		
-		# always return destination path as posix to avoid transmitting backslashes
-		yield pathlib.PurePosixPath(remote_path), local_hash, urllib.request.pathname2url(str(local_path))
+gc_server = gameconf_server.server.GameConfigServer()
 
 """
 Returns True if path `p` is within root.
@@ -107,13 +70,8 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 			self.write_vdf_response({ 'Errors': errors })
 			return
 		
-		sm_version = tuple(map(int, data.get('version').split('.')))
-		
-		changes = {}
-		for name, new_hash, location in get_changed_gameconf(sm_version, { data[f'file_{n}_name']: data[f'file_{n}_md5'] for n in range(int(data['files'])) }):
-			changes[name] = { 'md5sum': new_hash, 'location': location }
-		
-		self.write_vdf_response({ 'Changed': changes })
+		response = gc_server.process_request(data)
+		self.write_vdf_response(response)
 	
 	# SourceMod requests individual gameconf files
 	def do_GET(self):
@@ -147,6 +105,14 @@ def main():
 		raise Exception("Missing server configuration file.")
 	
 	config.read(args.config)
+	
+	# mount known game config directories for future iteration
+	# TODO this is hardcoded temporarily - move this into the config or something
+	gc_server.directories = [
+		gameconf_server.server.SourceModVersionedGameConfigDirectory('1.10', (1, 10)),
+		gameconf_server.server.SourceModVersionedGameConfigDirectory('1.11', (1, 11)),
+		gameconf_server.server.GameConfigDirectory('thirdparty'),
+	]
 	
 	new_root = config.get('server', 'workdir', fallback = None)
 	if new_root:

@@ -42,3 +42,65 @@ class GameConfigDirectory:
 		
 		_, hash = self.md5sums.get(file_path, (0, None))
 		return hash
+
+class SourceModVersionedGameConfigDirectory(GameConfigDirectory):
+	def __init__(self, path, required_version):
+		super().__init__(path)
+		self.required_version = required_version # tuple
+	
+	def valid_directory(self, data):
+		input_version = self.extract_version(data)
+		
+		# the input version must be at least as precise as the version specified for this entry
+		# we only test as many values as given
+		required_sig = len(self.required_version)
+		return len(input_version) >= len(self.required_version) and input_version[:required_sig] == self.required_version
+	
+	def extract_version(self, data):
+		version_str = data.get('version')
+		if not version_str:
+			return None
+		return tuple(map(int, version_str.split('.')))
+
+class GameConfigServer:
+	def __init__(self):
+		self.directories = []
+	
+	def process_request(self, data):
+		# takes a list of key / value pairs (dict / multidict) as sent from the gameconf client,
+		# and responds with a dict (upstream represents this as a VDF / SMC text)
+		
+		changes = {}
+		
+		num_files = int(data.get('files'))
+		for n in range(num_files):
+			file_name, file_md5 = data.get(f'file_{n}_name'), data.get(f'file_{n}_md5')
+			
+			if not file_name or not file_md5:
+				continue
+			
+			file_path = pathlib.Path(file_name)
+			if not file_path.is_relative_to('gamedata'):
+				continue
+			
+			file_path = file_path.relative_to('gamedata')
+			
+			local_hash, local_path = None, None
+			for gcdir in self.directories:
+				if not gcdir.valid_directory(data):
+					continue
+				
+				local_hash, local_path = gcdir.get_file_hash(file_path), gcdir.path / file_path
+				if local_hash:
+					break
+			
+			if not local_hash or file_md5 == local_hash:
+				continue
+			
+			# always return destination path as posix to avoid transmitting backslashes
+			changes[pathlib.PurePosixPath(file_path)] = {
+				'md5sum': local_hash,
+				'location': urllib.request.pathname2url(str(local_path)),
+			}
+		
+		return { 'Changed': changes }
