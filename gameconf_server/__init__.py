@@ -8,50 +8,15 @@ import http.server
 import urllib.parse
 import urllib.request
 import vdf
-import itertools
 import os
 import shutil
-import hashlib
 import cgi
-import cachetools
 import pathlib
 
 import configparser
 config = configparser.ConfigParser()
 
-"""
-Returns a cached value if the file modification time has not changed.
-"""
-class FileModTimeCache(cachetools.LRUCache):
-	def __init__(self, *args, **kwargs):
-		self.mtime_cache = {}
-		super().__init__(*args, **kwargs)
-	
-	def __getitem__(self, key):
-		if self.mtime_cache.get(key) != os.stat(key).st_mtime:
-			self.__missing__(key)
-		return super().__getitem__(key)
-	
-	def __setitem__(self, key, value):
-		super().__setitem__(key, value)
-		self.mtime_cache[key] = os.stat(key).st_mtime
-	
-	def popitem(self):
-		key, value = super().popitem()
-		self.mtime_cache.pop(key)
-		return key, value
-
-@cachetools.cached(cache = FileModTimeCache(maxsize = 1024), key = lambda *a: a[0])
-def get_md5sum_str(file_path):
-	try:
-		hasher = hashlib.md5()
-		with open(file_path, 'rb') as f:
-			for chunk in iter(lambda: f.read(4096), b''):
-				hasher.update(chunk)
-			return hasher.hexdigest()
-	except (PermissionError) as e:
-		pass
-	return ''
+import gameconf_server.server
 
 """
 Returns a gameconf dir string based on version (e.g., "1.10")
@@ -69,21 +34,27 @@ def get_changed_gameconf(sm_version, submitted_files):
 	# strip gamedata prefix from POST data
 	remote_files = { os.path.relpath(f, 'gamedata'): s for f, s in submitted_files.items() }
 	
-	gameconf_dirs = [ sm_gameconf_dir(sm_version), 'thirdparty' ]
+	# TODO move this to GameConfigServer with reused directory instances
+	gameconf_dirs = [
+		gameconf_server.server.GameConfigDirectory(p)
+		for p in [ sm_gameconf_dir(sm_version), 'thirdparty' ]
+	]
 	
-	for local_path in itertools.chain.from_iterable(pathlib.Path(f).rglob('*.txt') for f in gameconf_dirs):
-		# strip leading dir from our FS path to match remote_files
-		remote_path = pathlib.Path(*local_path.parts[1:])
-		remote_hash = remote_files.get(str(remote_path))
+	for remote_path, remote_hash in remote_files.items():
 		if not remote_hash:
 			continue
 		
-		local_hash = get_md5sum_str(local_path)
-		if remote_hash == local_hash:
+		local_hash, local_path = (None, None)
+		for gcdir in gameconf_dirs:
+			local_hash, local_path = gcdir.get_file_hash(remote_path), gcdir.path / remote_path
+			if local_hash:
+				break
+		
+		if not local_hash or remote_hash == local_hash:
 			continue
 		
 		# always return destination path as posix to avoid transmitting backslashes
-		yield pathlib.PurePosixPath(*remote_path.parts), local_hash, urllib.request.pathname2url(str(local_path))
+		yield pathlib.PurePosixPath(remote_path), local_hash, urllib.request.pathname2url(str(local_path))
 
 """
 Returns True if path `p` is within root.
