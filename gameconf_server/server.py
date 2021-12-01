@@ -64,7 +64,8 @@ class SourceModVersionedGameConfigDirectory(GameConfigDirectory):
 
 class GameConfigServer:
 	def __init__(self):
-		self.directories = []
+		# mapping the name of a 'virtual directory' to a physical directory
+		self.directories = {}
 	
 	def process_request(self, data):
 		# takes a list of key / value pairs (dict / multidict) as sent from the gameconf client,
@@ -86,11 +87,11 @@ class GameConfigServer:
 			file_path = file_path.relative_to('gamedata')
 			
 			local_hash, local_path = None, None
-			for gcdir in self.directories:
+			for mount_prefix, gcdir in self.directories.items():
 				if not gcdir.valid_directory(data):
 					continue
 				
-				local_hash, local_path = gcdir.get_file_hash(file_path), gcdir.path / file_path
+				local_hash, local_path = gcdir.get_file_hash(file_path), mount_prefix / file_path
 				if local_hash:
 					break
 			

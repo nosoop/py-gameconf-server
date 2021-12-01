@@ -108,11 +108,11 @@ def main():
 	
 	# mount known game config directories for future iteration
 	# TODO this is hardcoded temporarily - move this into the config or something
-	gc_server.directories = [
-		gameconf_server.server.SourceModVersionedGameConfigDirectory('1.10', (1, 10)),
-		gameconf_server.server.SourceModVersionedGameConfigDirectory('1.11', (1, 11)),
-		gameconf_server.server.GameConfigDirectory('thirdparty'),
-	]
+	gc_server.directories = {
+		"1.10": gameconf_server.server.SourceModVersionedGameConfigDirectory('1.10', (1, 10)),
+		"1.11": gameconf_server.server.SourceModVersionedGameConfigDirectory('1.11', (1, 11)),
+		"thirdparty": gameconf_server.server.GameConfigDirectory('thirdparty'),
+	}
 	
 	new_root = config.get('server', 'workdir', fallback = None)
 	if new_root:
