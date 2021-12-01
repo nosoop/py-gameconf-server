@@ -99,7 +99,7 @@ class GameConfigServer:
 				continue
 			
 			# always return destination path as posix to avoid transmitting backslashes
-			changes[pathlib.PurePosixPath(file_path)] = {
+			changes[str(pathlib.PurePosixPath(file_path))] = {
 				'md5sum': local_hash,
 				'location': urllib.request.pathname2url(str(local_path)),
 			}
