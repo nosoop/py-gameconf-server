@@ -19,12 +19,6 @@ config = configparser.ConfigParser()
 import gameconf_server.server
 gc_server = gameconf_server.server.GameConfigServer()
 
-"""
-Returns True if path `p` is within root.
-"""
-def is_path_under(root, p):
-	return pathlib.Path(*os.path.commonprefix([p.parts, root.parts])) == root
-
 class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	"""
 	Parses form data from a POST request.
@@ -75,14 +69,12 @@ class GameConfUpdateHandler(http.server.BaseHTTPRequestHandler):
 	
 	# SourceMod requests individual gameconf files
 	def do_GET(self):
-		request_path = pathlib.Path(urllib.request.url2pathname(self.path[1:])).resolve()
+		# strip leading '/' to turn into a relative path component
+		request_path = gc_server.get_gameconf_file_path(
+			urllib.request.url2pathname(self.path[1:])
+		)
 		
-		# prevent path traversal attacks
-		if not is_path_under(pathlib.Path.cwd(), request_path):
-			self.send_plaintext_headers(code = 403)
-			return
-		
-		if not request_path.is_file() or request_path.suffix != '.txt':
+		if not request_path:
 			self.send_plaintext_headers(code = 404)
 			return
 		

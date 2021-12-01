@@ -105,3 +105,23 @@ class GameConfigServer:
 			}
 		
 		return { 'Changed': changes }
+	
+	def get_gameconf_file_path(self, target_path):
+		"""
+		Given a relative URL input path, returns the path of the file on disk.
+		"""
+		mount_prefix, *subpath = pathlib.Path(target_path).parts
+		gcdir = self.directories.get(mount_prefix)
+		if not gcdir:
+			return None
+		
+		result_path = (gcdir.path / pathlib.Path(*subpath))
+		
+		if os.path.commonprefix((result_path.resolve(), gcdir.path.resolve())) != str(gcdir.path.resolve()):
+			# prevent path traversal attack
+			return None
+		
+		if not result_path.is_file() or result_path.suffix != '.txt':
+			return None
+		
+		return result_path
