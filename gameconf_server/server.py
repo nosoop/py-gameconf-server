@@ -117,7 +117,8 @@ class GameConfigServer:
 		
 		result_path = (gcdir.path / pathlib.Path(*subpath))
 		
-		if os.path.commonpath(os.path.abspath(p) for p in (result_path, gcdir.path)) != str(gcdir.path.resolve()):
+		result_abspath, gcdir_abspath = (os.path.abspath(p) for p in (result_path, gcdir.path))
+		if os.path.commonpath((result_abspath, gcdir_abspath)) != gcdir_abspath:
 			# prevent path traversal attack
 			# os.path.abspath is used over pathlib.Path.resolve to allow for symlinks
 			return None
